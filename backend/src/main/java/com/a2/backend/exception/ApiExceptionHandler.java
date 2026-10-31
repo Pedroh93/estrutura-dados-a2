@@ -1,4 +1,5 @@
 package com.a2.backend.exception;
+
 import java.util.Map;
 
 import org.springframework.http.HttpStatus;
@@ -6,10 +7,14 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
+/** Converte exceções em respostas {"message": "..."} com 400 ou 404, como o frontend espera. */
+@RestControllerAdvice
 public class ApiExceptionHandler {
-      @ExceptionHandler(RecursoNaoEncontradoException.class)
+
+    @ExceptionHandler(RecursoNaoEncontradoException.class)
     public ResponseEntity<Map<String, String>> naoEncontrado(RecursoNaoEncontradoException e) {
         return resposta(HttpStatus.NOT_FOUND, e.getMessage());
     }
