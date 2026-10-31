@@ -1,0 +1,52 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: a2-postgres
+    environment:
+      POSTGRES_DB: ${DB_NAME:-a2}
+      POSTGRES_USER: ${DB_USERNAME:-a2}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-a2}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U ${DB_USERNAME:-a2} -d ${DB_NAME:-a2}" ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: a2-pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:-admin}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:-admin}
+      PGADMIN_CONFIG_SERVER_MODE: "False"
+      PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED: "False"
+    ports:
+      - "5050:80"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+      - ./pgadmin/servers.json:/pgadmin4/servers.json:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  backend:
+    build: ./backend
+    container_name: a2-backend
+    environment:
+      DB_URL: jdbc:postgresql://postgres:5432/${DB_NAME:-a2}
+      DB_USERNAME: ${DB_USERNAME:-a2}
+      DB_PASSWORD: ${DB_PASSWORD:-a2}
+      CORS_ALLOWED_ORIGINS: http://localhost:5173
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
+  pgadmin_data:

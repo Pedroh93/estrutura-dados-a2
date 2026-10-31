@@ -1,0 +1,30 @@
+spring:
+  application:
+    name: backend
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/a2}
+    username: ${DB_USERNAME:a2}
+    password: ${DB_PASSWORD:a2}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+    properties:
+      hibernate:
+        format_sql: true
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+
+server:
+  port: ${SERVER_PORT:8080}
+
+app:
+  cors:
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
