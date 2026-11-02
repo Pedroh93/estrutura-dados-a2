@@ -1,4 +1,4 @@
-package com.a2.entity;
+package com.a2.backend.entity;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
@@ -14,6 +14,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
+import jakarta.persistence.OrderBy;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -43,7 +44,8 @@ public class Itemformula {
     private Itemformula pai;
 
     @OneToMany(mappedBy = "pai", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<Itemformula> filhos = new ArrayList<>();
+   @OrderBy("id")
+   private List<Itemformula> filhos = new ArrayList<>();
 
     @Column(nullable = false)
     private String nome;
@@ -53,6 +55,8 @@ public class Itemformula {
 
     @Column(nullable = false, precision = 12, scale = 2)
     private BigDecimal valor;
+
+    
 
     public void adicionarFilho(Itemformula filho) {
         filhos.add(filho);
