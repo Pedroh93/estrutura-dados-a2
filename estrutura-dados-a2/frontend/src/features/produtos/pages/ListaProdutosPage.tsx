@@ -1,4 +1,4 @@
-import { Link } from 'react-router'
+import { Link } from "react-router-dom";
 import { Carregando, MensagemErro } from '../../../components/Feedback'
 import { formatarMoeda } from '../../../lib/format'
 import { useRequest } from '../../../lib/useRequest'

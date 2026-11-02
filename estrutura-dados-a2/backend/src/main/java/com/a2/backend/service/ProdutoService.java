@@ -103,6 +103,72 @@ public class ProdutoService {
         return resumir(produto);
     }
 
+    @Transactional
+    public ProdutoResumo atualizar(Integer produtoId, NovoProdutoRequest req) {
+        if (req == null || req.nome() == null || req.nome().isBlank()) {
+            throw new IllegalArgumentException("Informe o nome do produto");
+        }
+        if (req.itens() == null || req.itens().isEmpty()) {
+            throw new IllegalArgumentException("A fórmula precisa ter ao menos um item");
+        }
+
+        Produto produto = produtoRepository.findById(produtoId)
+                .orElseThrow(() -> new RecursoNaoEncontradoException(
+                        "Produto " + produtoId + " não encontrado"));
+
+        List<Itemformula> itens = new ArrayList<>();
+        List<String> pais = new ArrayList<>();
+        for (ItemFormulaRequest r : req.itens()) {
+            itens.add(criarItem(r));
+            pais.add(r.pai() == null || r.pai().isBlank() ? null : r.pai().trim());
+        }
+
+        Set<String> nomesPai = pais.stream().filter(p -> p != null).collect(Collectors.toSet());
+        Map<String, Itemformula> porNome = new HashMap<>();
+        for (Itemformula item : itens) {
+            if (nomesPai.contains(item.getNome()) && porNome.put(item.getNome(), item) != null) {
+                throw new IllegalArgumentException(
+                        "O item '" + item.getNome() + "' é usado como pai e seu nome se repete na fórmula");
+            }
+        }
+
+        Itemformula novaRaiz = null;
+        for (int i = 0; i < itens.size(); i++) {
+            Itemformula item = itens.get(i);
+            String paiNome = pais.get(i);
+            if (paiNome == null) {
+                if (novaRaiz != null) {
+                    throw new IllegalArgumentException("A fórmula deve ter apenas um item raiz (sem pai)");
+                }
+                novaRaiz = item;
+            } else {
+                Itemformula pai = porNome.get(paiNome);
+                if (pai == null) {
+                    throw new IllegalArgumentException("Pai '" + paiNome + "' não existe na fórmula");
+                }
+                pai.adicionarFilho(item);
+            }
+        }
+        if (novaRaiz == null) {
+            throw new IllegalArgumentException("Informe o item raiz (sem pai)");
+        }
+        if (contar(novaRaiz) != itens.size()) {
+            throw new IllegalArgumentException("Há itens que não estão ligados à raiz (ciclo ou pai inválido)");
+        }
+
+        // Substitui a fórmula antiga pela nova dentro da mesma transação.
+        itemRepository.findByProdutoIdAndPaiIsNull(produtoId).ifPresent(itemRepository::delete);
+        itemRepository.flush();
+
+        produto.setNome(req.nome().trim());
+        for (Itemformula item : itens) {
+            item.setProduto(produto);
+        }
+        itemRepository.save(novaRaiz);
+
+        return resumir(produto);
+    }
+
     @Transactional(readOnly = true)
     public NoExplosao explosao(Integer produtoId) {
         return paraExplosao(raizDe(produtoId));

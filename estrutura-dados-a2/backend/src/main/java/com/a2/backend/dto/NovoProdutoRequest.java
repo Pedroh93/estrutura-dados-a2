@@ -4,3 +4,4 @@ import java.util.List;
 
 public record NovoProdutoRequest(String nome, List<ItemFormulaRequest> itens) {
 }
+    
