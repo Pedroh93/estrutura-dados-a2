@@ -22,15 +22,13 @@ public class TesteCaneta {
 
         TreeNode raiz = ArvoreGenerica.buildTree(itens);
 
-        // Exibir árvore
+     
         System.out.println("Árvore da fórmula da caneta:");
         ArvoreGenerica.printTree(raiz, 0);
 
-        // Calcular valor unitário
         double total = ArvoreGenerica.calcularTotal(raiz);
         System.out.printf("\nValor total da caneta: R$ %.2f\n", total);
 
-        // Calcular custo de produção
         int quantidade = 10;
 
         double custoProducao = ArvoreGenerica.calcularProducao(raiz, quantidade);
@@ -41,16 +39,14 @@ public class TesteCaneta {
             custoProducao
         );
 
-        // Calcular quantidade de componentes
         System.out.println("\nComponentes para produzir 10 canetas:");
         ArvoreGenerica.calcularComponentes(raiz, quantidade);
 
-        // Atualizar preço do Pigmento
+      
         System.out.println("\nAtualizando o preço do Pigmento...");
 
         ArvoreGenerica.atualizarPreco(raiz, "Pigmento", 0.50);
 
-        // Recalcular custo após atualização
         double novoTotal = ArvoreGenerica.calcularTotal(raiz);
 
         System.out.printf("Novo custo da caneta: R$ %.2f\n", novoTotal);

@@ -27,15 +27,7 @@ import com.a2.backend.exception.RecursoNaoEncontradoException;
 import com.a2.backend.repository.ItemFormulaRepository;
 import com.a2.backend.repository.ProdutoRepository;
 
-/**
- * Casos de uso da fórmula de produto. A árvore genérica é o próprio grafo de
- * entidades Itemformula (pai / filhos): a raiz é o item sem pai.
- *
- * Regras (ver README):
- *  - quantidade é por unidade do pai;
- *  - valor de folha = preço de compra; valor de composto = soma(valor x qtd) dos filhos;
- *  - atualização de preço é feita pelo ID do item (nomes podem se repetir).
- */
+
 @Service
 public class ProdutoService {
 
@@ -49,17 +41,11 @@ public class ProdutoService {
         this.itemRepository = itemRepository;
     }
 
-    // ------------------------------------------------------------------
-    // GET /api/produtos
-    // ------------------------------------------------------------------
     @Transactional(readOnly = true)
     public List<ProdutoResumo> listar() {
         return produtoRepository.findAll().stream().map(this::resumir).toList();
     }
 
-    // ------------------------------------------------------------------
-    // POST /api/produtos  (cadastro da fórmula)
-    // ------------------------------------------------------------------
     @Transactional
     public ProdutoResumo criar(NovoProdutoRequest req) {
         if (req == null || req.nome() == null || req.nome().isBlank()) {
@@ -68,16 +54,12 @@ public class ProdutoService {
         if (req.itens() == null || req.itens().isEmpty()) {
             throw new IllegalArgumentException("A fórmula precisa ter ao menos um item");
         }
-
-        // 1. cria os itens soltos, validando cada campo
         List<Itemformula> itens = new ArrayList<>();
         List<String> pais = new ArrayList<>();
         for (ItemFormulaRequest r : req.itens()) {
             itens.add(criarItem(r));
             pais.add(r.pai() == null || r.pai().isBlank() ? null : r.pai().trim());
         }
-
-        // 2. nomes usados como pai precisam ser únicos
         Set<String> nomesPai = pais.stream().filter(p -> p != null).collect(Collectors.toSet());
         Map<String, Itemformula> porNome = new HashMap<>();
         for (Itemformula item : itens) {
@@ -86,8 +68,6 @@ public class ProdutoService {
                         "O item '" + item.getNome() + "' é usado como pai e seu nome se repete na fórmula");
             }
         }
-
-        // 3. liga filhos aos pais e encontra a raiz (única)
         Itemformula raiz = null;
         for (int i = 0; i < itens.size(); i++) {
             Itemformula item = itens.get(i);
@@ -112,7 +92,6 @@ public class ProdutoService {
             throw new IllegalArgumentException("Há itens que não estão ligados à raiz (ciclo ou pai inválido)");
         }
 
-        // 4. persiste: produto + árvore (cascade ALL em filhos)
         Produto produto = new Produto();
         produto.setNome(req.nome().trim());
         produto = produtoRepository.save(produto);
@@ -124,17 +103,11 @@ public class ProdutoService {
         return resumir(produto);
     }
 
-    // ------------------------------------------------------------------
-    // GET /api/produtos/{id}/explosao
-    // ------------------------------------------------------------------
     @Transactional(readOnly = true)
     public NoExplosao explosao(Integer produtoId) {
         return paraExplosao(raizDe(produtoId));
     }
 
-    // ------------------------------------------------------------------
-    // GET /api/produtos/{id}/necessidade?quantidade=N
-    // ------------------------------------------------------------------
     @Transactional(readOnly = true)
     public Necessidade necessidade(Integer produtoId, int quantidade) {
         if (quantidade <= 0) {
@@ -153,7 +126,7 @@ public class ProdutoService {
         BigDecimal total = BigDecimal.ZERO;
         for (Map.Entry<String, Acumulado> e : acumulado.entrySet()) {
             Acumulado a = e.getValue();
-            // valor unitário = média ponderada dos itens de mesmo nome
+          
             BigDecimal unitario = a.total.divide(BigDecimal.valueOf(a.quantidade), 4, RoundingMode.HALF_UP);
             componentes.add(new ComponenteNecessario(e.getKey(), a.quantidade,
                     unitario.doubleValue(), a.total.doubleValue()));
@@ -162,9 +135,7 @@ public class ProdutoService {
         return new Necessidade(quantidade, componentes, total.doubleValue());
     }
 
-    // ------------------------------------------------------------------
-    // PATCH /api/produtos/{id}/itens/{itemId}
-    // ------------------------------------------------------------------
+
     @Transactional
     public NoExplosao atualizarValor(Integer produtoId, Integer itemId, Double valor) {
         if (valor == null || valor < 0) {
@@ -179,9 +150,6 @@ public class ProdutoService {
         return paraExplosao(raizDe(produtoId));
     }
 
-    // ------------------------------------------------------------------
-    // POST /api/produtos/{id}/implosao
-    // ------------------------------------------------------------------
     @Transactional
     public ResultadoImplosao implodir(Integer produtoId) {
         Itemformula raiz = raizDe(produtoId);
@@ -190,9 +158,7 @@ public class ProdutoService {
         return new ResultadoImplosao(paraExplosao(raiz), alteracoes);
     }
 
-    // ------------------------------------------------------------------
-    // DELETE /api/produtos/{id}
-    // ------------------------------------------------------------------
+  
     @Transactional
     public void excluir(Integer produtoId) {
         Produto produto = produtoRepository.findById(produtoId)
@@ -202,11 +168,7 @@ public class ProdutoService {
         produtoRepository.delete(produto);
     }
 
-    // ==================================================================
-    // Algoritmos da árvore
-    // ==================================================================
-
-    /** Custo do nó: folha = valor; composto = soma(custo do filho x quantidade). */
+  
     private BigDecimal custo(Itemformula no) {
         if (no.getFilhos().isEmpty()) {
             return no.getValor();
@@ -218,7 +180,7 @@ public class ProdutoService {
         return total;
     }
 
-    /** Implosão: recalcula de baixo para cima e corrige os compostos. */
+
     private BigDecimal implodir(Itemformula no, List<AlteracaoValor> alteracoes) {
         if (no.getFilhos().isEmpty()) {
             return no.getValor();
@@ -236,7 +198,7 @@ public class ProdutoService {
         return soma;
     }
 
-    /** Explosão: converte o nó e seus filhos no DTO da árvore. */
+
     private NoExplosao paraExplosao(Itemformula no) {
         List<NoExplosao> filhos = no.getFilhos().stream().map(this::paraExplosao).toList();
         BigDecimal unitario = no.getValor();
@@ -245,7 +207,7 @@ public class ProdutoService {
                 unitario.doubleValue(), total.doubleValue(), filhos);
     }
 
-    /** Desce a árvore multiplicando as quantidades; só as folhas são compradas. */
+    
     private void coletarFolhas(Itemformula no, int quantidadePai, Map<String, Acumulado> acumulado) {
         for (Itemformula filho : no.getFilhos()) {
             int quantidade = quantidadePai * filho.getQuantidade();
@@ -271,9 +233,7 @@ public class ProdutoService {
         return n;
     }
 
-    // ==================================================================
-    // Auxiliares
-    // ==================================================================
+  
 
     private Itemformula raizDe(Integer produtoId) {
         if (!produtoRepository.existsById(produtoId)) {
