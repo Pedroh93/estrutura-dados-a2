@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import { MensagemErro } from '../../../components/Feedback'
 import { lerNumero } from '../../../lib/format'
 import { produtosApi } from '../api'
